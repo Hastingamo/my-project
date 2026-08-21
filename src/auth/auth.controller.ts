@@ -15,7 +15,7 @@ export class AuthController {
   }
 
     @Post('login')
-  async login(@Body() credentails: LoginDto ) {
+  async login(@Body() credentails: LoginDto) {
         return this.authService.login(credentails);
 
   }
