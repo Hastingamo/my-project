@@ -5,12 +5,14 @@ import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private jwtService: JwtService,
   ) {}
 
   async signup(signUpData: SignupDto) {
@@ -44,10 +46,12 @@ export class AuthService {
 
 const savedUser = await this.userRepository.save(newUser);
 const { password: _, ...safeUser } = savedUser;
+    const accessToken = await this.generateUserToken(savedUser.id);
     
 
     return {
       message: 'Signup successful',
+      accessToken,
       user: safeUser,
     };
   }
@@ -66,13 +70,22 @@ const { password: _, ...safeUser } = savedUser;
     }
 
     const { password: _, ...safeUser } = user;
+        const accessToken = await this.generateUserToken(user.id);
+
 
     return {
       message: 'Login successful',
+      accessToken,
       user: safeUser,
     };
   }
 
+  // async generateUserToken(userId: number) {
+  //   return this.jwtService.sign({ sub: userId }, { expiresIn: '1h' });
+  // }
+async generateUserToken(userId: number) {
+  return this.jwtService.sign({ sub: userId }, { expiresIn: '1h' });
+}
   findAll() {
     return `This action returns all auth`;
   }
