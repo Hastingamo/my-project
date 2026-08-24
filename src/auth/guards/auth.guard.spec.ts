@@ -108,4 +108,31 @@ describe('AuthGuard', () => {
       secret: 'test-secret',
     });
   });
+
+  it('should verify token without explicit secret option if ConfigService returns undefined for JWT_SECRET', async () => {
+    mockConfigService.get.mockReturnValue(undefined);
+    const payload = { sub: 2, email: 'user2@example.com' };
+    mockJwtService.verifyAsync.mockResolvedValue(payload);
+
+    const request: any = {
+      headers: {
+        authorization: 'Bearer valid.jwt.token',
+      },
+    };
+
+    const context = {
+      switchToHttp: () => ({
+        getRequest: () => request,
+      }),
+    } as ExecutionContext;
+
+    const result = await guard.canActivate(context);
+
+    expect(result).toBe(true);
+    expect(request.user).toEqual(payload);
+    expect(mockJwtService.verifyAsync).toHaveBeenCalledWith(
+      'valid.jwt.token',
+      undefined,
+    );
+  });
 });

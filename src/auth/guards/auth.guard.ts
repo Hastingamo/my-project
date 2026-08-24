@@ -25,9 +25,10 @@ export class AuthGuard implements CanActivate {
 
     try {
       const secret = this.configService.get<string>('JWT_SECRET');
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret,
-      });
+      const payload = await this.jwtService.verifyAsync(
+        token,
+        secret ? { secret } : undefined,
+      );
 
       request['user'] = payload;
     } catch {
@@ -38,7 +39,11 @@ export class AuthGuard implements CanActivate {
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    const authorization = request.headers?.authorization;
+    if (!authorization) {
+      return undefined;
+    }
+    const [type, token] = authorization.split(' ');
     return type === 'Bearer' ? token : undefined;
   }
 }
