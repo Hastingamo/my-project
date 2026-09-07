@@ -1,9 +1,20 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+  Put,
+} from '@nestjs/common';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
-// import { CreateAuthDto } from './dto/create-auth.dto';
-// import { UpdateAuthDto } from './dto/update-auth.dto';
+import { AuthGuard } from 'src/guards/auth.guards';
+import { PasswordChangeDto } from './dto/changePassword.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -14,15 +25,34 @@ export class AuthController {
     return this.authService.signup(signUpData);
   }
 
-    @Post('login')
-  async login(@Body() credentails: LoginDto) {
-        return this.authService.login(credentails);
-
+  @Post('login')
+  async login(@Body() credentials: LoginDto) {
+    return this.authService.login(credentials);
   }
 
-  // create(@Body() createAuthDto: CreateAuthDto) {
-  //   return this.authService.create(createAuthDto);
-  // }
+  @UseGuards(AuthGuard)
+  @Get('protected')
+  someProtectedRoute(@Req() request: Request & { userId: number }) {
+    return {
+      message: 'Access granted',
+      status: 200,
+      data: 'This route is protected and requires authentication.',
+      userId: request.userId,
+    };
+  }
+
+  @UseGuards(AuthGuard)
+  @Put('changePassword')
+    async changePassword(@Body() changePasswordData: PasswordChangeDto, @Req() request: Request & { userId: number }) {
+    return this.authService.changePasswordData(changePasswordData.oldPassword, changePasswordData.newPassword, request.userId);
+  }
+
+  @Post('forgetPassword')
+
+    async forgetPassword(@Body() forgetPasswordData: forgotPasswordDto) {
+    return this.authService.forgetPassword(forgetPasswordData.email);
+  }
+
 
   @Get()
   findAll() {
@@ -33,11 +63,6 @@ export class AuthController {
   findOne(@Param('id') id: string) {
     return this.authService.findOne(+id);
   }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-  //   return this.authService.update(+id, updateAuthDto);
-  // }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
