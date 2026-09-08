@@ -26,6 +26,9 @@ export class MailService implements OnModuleInit {
         user: this.configService.get<string>('MAIL_USER'),
         pass: this.configService.get<string>('MAIL_PASS'),
       },
+          tls: {
+      rejectUnauthorized: false, 
+    },
     });
 
     this.logger.log(`Mail transporter ready: ${this.configService.get('MAIL_USER')}`);

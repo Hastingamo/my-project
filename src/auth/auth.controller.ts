@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Get,
@@ -15,7 +16,8 @@ import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { PasswordChangeDto } from './dto/changePassword.dto';
-
+import { ForgotPasswordDto } from './dto/forgetPassword.dto';
+import { ResetPasswordDto } from './dto/resetPassword.dto';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -43,27 +45,48 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Put('changePassword')
-    async changePassword(@Body() changePasswordData: PasswordChangeDto, @Req() request: Request & { userId: number }) {
-    return this.authService.changePasswordData(changePasswordData.oldPassword, changePasswordData.newPassword, request.userId);
+  async changePassword(
+    @Body() changePasswordData: PasswordChangeDto,
+    @Req() request: Request & { userId: number },
+  ) {
+    return this.authService.changePasswordData(
+      changePasswordData.oldPassword,
+      changePasswordData.newPassword,
+      request.userId,
+    );
   }
 
   @Post('forgetPassword')
-
-    async forgetPassword(@Body() forgetPasswordData: forgotPasswordDto) {
+  async forgetPassword(@Body() forgetPasswordData: ForgotPasswordDto) {
     return this.authService.forgetPassword(forgetPasswordData.email);
   }
 
+@UseGuards(AuthGuard)
+@Get('profile')
+async getProfile(@Req() req) {
+  return this.authService.findById(req.userId);
+}
 
+  @Post('resetPassword')
+async resetPassword(@Body() resetPasswordData: ResetPasswordDto) {
+  return this.authService.resetPassword(
+    resetPasswordData.resetToken,
+    resetPasswordData.newPassword,
+  );
+}
+  @UseGuards(AuthGuard)
   @Get()
   findAll() {
     return this.authService.findAll();
   }
 
+  @UseGuards(AuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.authService.findOne(+id);
   }
 
+  @UseGuards(AuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.authService.remove(+id);

@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from './entities/user.entity';
 import { ForgotPassword } from './entities/forgotPassword.entity';
+import { MailService } from 'src/Services/mail.Services';
 
 @Module({
   imports: [
@@ -11,6 +12,6 @@ import { ForgotPassword } from './entities/forgotPassword.entity';
 
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, MailService],
 })
 export class AuthModule {}
