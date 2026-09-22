@@ -22,14 +22,14 @@ import { MailService } from './Services/mail.Services';
         signOptions: { expiresIn: '1h' },
       }),
     }),
-  
-      TypeOrmModule.forRoot({
+
+    TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'Postgre@55',
-      database: 'Ecommerce',
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
       autoLoadEntities: true,
       synchronize: true,
     }),

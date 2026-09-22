@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { User } from './entities/user.entity';
 import { ForgotPassword } from './entities/forgotPassword.entity';
 import { MailService } from 'src/Services/mail.Services';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
@@ -12,6 +13,6 @@ import { MailService } from 'src/Services/mail.Services';
 
   ],
   controllers: [AuthController],
-  providers: [AuthService, MailService],
+  providers: [AuthService, MailService, GoogleStrategy],
 })
 export class AuthModule {}

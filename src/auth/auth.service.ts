@@ -1,4 +1,4 @@
-// import { Injectable, ConflictException, UnauthorizedException,Logger  } from '@nestjs/common';
+// import { Injectable, ConflictException, UnauthorizedException, Logger, NotFoundException } from '@nestjs/common';
 // import { InjectRepository } from '@nestjs/typeorm';
 // import { Repository } from 'typeorm';
 // import * as bcrypt from 'bcrypt';
@@ -12,7 +12,7 @@
 
 // @Injectable()
 // export class AuthService {
-//     private readonly logger = new Logger(AuthService.name); 
+//   private readonly logger = new Logger(AuthService.name);
 //   constructor(
 //     @InjectRepository(User)
 //     private userRepository: Repository<User>,
@@ -30,7 +30,6 @@
 //         throw new UnauthorizedException('Invalid admin key');
 //       }
 //     }
-    
 
 //     const emailExist = await this.userRepository.findOne({ where: { email } });
 //     if (emailExist) {
@@ -141,7 +140,7 @@
 
 //     if (user) {
 //       const expirationDate = new Date();
-//       expirationDate.setHours(expirationDate.getHours() + 1); // expires in 1 hour
+//       expirationDate.setHours(expirationDate.getHours() + 1);
 
 //       const resetToken = nanoid(64);
 
@@ -155,7 +154,7 @@
 //       try {
 //         await this.mailService.sendPasswordResetEmail(email, resetToken);
 //       } catch (error) {
-//   this.logger.error('Failed to send reset email', error); // add a Logger to AuthService if you don't have one
+//         this.logger.error('Failed to send reset email', error);
 //       }
 //     }
 
@@ -164,42 +163,51 @@
 //     };
 //   }
 
-// async resetPassword(resetToken: string, newPassword: string) {
-//   const forgotPasswordEntry = await this.forgotPasswordRepository.findOne({
-//     where: { resetPasswordToken: resetToken },
-//   });
+//   async resetPassword(resetToken: string, newPassword: string) {
+//     const forgotPasswordEntry = await this.forgotPasswordRepository.findOne({
+//       where: { resetPasswordToken: resetToken },
+//     });
 
-//   if (!forgotPasswordEntry) {
-//     throw new UnauthorizedException('Invalid or expired reset token');
+//     if (!forgotPasswordEntry) {
+//       throw new UnauthorizedException('Invalid or expired reset token');
+//     }
+
+//     if (
+//       !forgotPasswordEntry.resetPasswordExpires ||
+//       new Date(forgotPasswordEntry.resetPasswordExpires) < new Date()
+//     ) {
+//       throw new UnauthorizedException('Invalid or expired reset token');
+//     }
+
+//     const user = await this.userRepository.findOne({
+//       where: { id: forgotPasswordEntry.userId },
+//     });
+
+//     if (!user) {
+//       throw new UnauthorizedException('Invalid or expired reset token');
+//     }
+
+//     const hashedPassword = await bcrypt.hash(newPassword, 10);
+//     await this.userRepository.update(user.id, { password: hashedPassword });
+
+//     await this.forgotPasswordRepository.delete(forgotPasswordEntry.id);
+
+//     return { message: 'Password has been reset successfully' };
 //   }
-
-//   if (
-//     !forgotPasswordEntry.resetPasswordExpires ||
-//     new Date(forgotPasswordEntry.resetPasswordExpires) < new Date()
-//   ) {
-//     throw new UnauthorizedException('Invalid or expired reset token');
-//   }
-
-//   const user = await this.userRepository.findOne({
-//     where: { id: forgotPasswordEntry.userId },
-//   });
-
-//   if (!user) {
-//     throw new UnauthorizedException('Invalid or expired reset token');
-//   }
-
-//   const hashedPassword = await bcrypt.hash(newPassword, 10);
-//   await this.userRepository.update(user.id, { password: hashedPassword });
-
-//   // invalidate the token so it can't be reused
-//   await this.forgotPasswordRepository.delete(forgotPasswordEntry.id);
-
-//   return { message: 'Password has been reset successfully' };
-// }
 
 //   async logout(userId: number) {
 //     await this.userRepository.update(userId, { hashedRefreshToken: null });
 //     return { message: 'Logged out successfully' };
+//   }
+
+  
+//   async findById(id: number) {
+//     const user = await this.userRepository.findOne({ where: { id } });
+//     if (!user) {
+//       throw new NotFoundException('User not found');
+//     }
+//     const { password, hashedRefreshToken, ...safeUser } = user;
+//     return safeUser;
 //   }
 
 //   findAll() {
@@ -217,7 +225,14 @@
 
 
 
-import { Injectable, ConflictException, UnauthorizedException, Logger, NotFoundException } from '@nestjs/common';
+
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -285,9 +300,47 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.password) {
+      throw new UnauthorizedException(
+        'This account uses Google sign-in. Please log in with Google.',
+      );
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const tokens = await this.generateTokens(user.id);
+    await this.updateRefreshToken(user.id, tokens.refreshToken);
+
+    const { password: _, hashedRefreshToken: __, ...safeUser } = user;
+
+    return {
+      message: 'Login successful',
+      ...tokens,
+      user: safeUser,
+    };
+  }
+
+  async googleLogin(googleUser: {
+    email: string;
+    firstName: string;
+    lastName: string;
+  }) {
+    let user = await this.userRepository.findOne({
+      where: { email: googleUser.email },
+    });
+
+    if (!user) {
+      user = this.userRepository.create({
+        email: googleUser.email,
+        userName: `${googleUser.firstName} ${googleUser.lastName}`.trim(),
+        role: 'buyer',
+        password: null,
+        isOAuth: true,
+      });
+      user = await this.userRepository.save(user);
     }
 
     const tokens = await this.generateTokens(user.id);
@@ -345,6 +398,13 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
+
+    if (!user.password) {
+      throw new UnauthorizedException(
+        'This account uses Google sign-in and has no password to change',
+      );
+    }
+
     const passwordMatch = await bcrypt.compare(oldPassword, user.password);
     if (!passwordMatch) {
       throw new UnauthorizedException('Old password is incorrect');

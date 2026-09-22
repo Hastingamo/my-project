@@ -8,8 +8,8 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
-  @Column()
-  password!: string;
+  @Column({ type: 'varchar', nullable: true })
+  password: string | null;
 
   @Column()
   userName!: string;
@@ -19,4 +19,7 @@ export class User {
 
   @Column({ type: 'varchar', nullable: true })
   hashedRefreshToken!: string | null;
+
+  @Column({ default: false })
+  isOAuth: boolean;
 }

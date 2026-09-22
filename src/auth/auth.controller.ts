@@ -9,8 +9,9 @@ import {
   UseGuards,
   Req,
   Put,
+  Res,
 } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -18,6 +19,7 @@ import { AuthGuard } from 'src/guards/auth.guards';
 import { PasswordChangeDto } from './dto/changePassword.dto';
 import { ForgotPasswordDto } from './dto/forgetPassword.dto';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
+import {AuthGuard as PassportAuthGuard} from '@nestjs/passport';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -74,11 +76,31 @@ async resetPassword(@Body() resetPasswordData: ResetPasswordDto) {
     resetPasswordData.newPassword,
   );
 }
+
+  @Get('google')
+  @UseGuards(PassportAuthGuard('google'))
+  async googleAuth() {
+  }
+  // @Get('google/callback')
+  // @UseGuards(PassportAuthGuard('google'))
+  // async googleAuthCallback(@Req() req, @Res() res: Response) {
+  //   const { accessToken } = await this.authService.googleLogin(req.user);
+  //   res.redirect(`http://localhost:3000/auth/callback?token=${accessToken}`);
+  // }
+
+  @Get('google/callback')
+@UseGuards(PassportAuthGuard('google'))
+async googleAuthCallback(@Req() req, @Res() res: Response) {
+  const { accessToken, refreshToken } = await this.authService.googleLogin(req.user);
+  res.redirect(`http://localhost:3000/auth/callback?token=${accessToken}&refreshToken=${refreshToken}`);
+}
+
   @UseGuards(AuthGuard)
   @Get()
   findAll() {
     return this.authService.findAll();
   }
+  
 
   @UseGuards(AuthGuard)
   @Get(':id')
